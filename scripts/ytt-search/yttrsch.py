@@ -1,132 +1,166 @@
 # script.py
 import argparse
 import os
+import re
+from dotenv import load_dotenv
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound
 from googleapiclient.discovery import build
-from dotenv import load_dotenv
-import re
 
-# Load environment variables
+# ANSI color codes
+BLUE      = '\033[94m'
+YELLOW    = '\033[93m'
+BG_LIME   = '\033[102m'
+BG_CYAN   = '\033[46m'
+BG_RED    = '\033[41m'
+BG_GREEN  = '\033[42m'
+RED       = '\033[31m'
+MAGENTA   = '\033[35m'
+CYAN      = '\033[36m'
+GREEN     = '\033[32m'
+BLACK     = '\033[30m'
+RESET     = '\033[0m'
+
+# cycle through these for each keyword
+KEY_COLORS = [BG_CYAN, BG_LIME, BG_RED, BG_GREEN]
+
 load_dotenv()
 
 def extract_video_id(url):
-    """
-    Extract the video ID from a YouTube URL.
-    Supports formats like:
-      - https://youtube.com/watch?v=VIDEO_ID
-      - https://youtu.be/VIDEO_ID
-      - https://www.youtube.com/watch?v=VIDEO_ID
-    """
-    # Regular expression to extract the video ID from the URL
-    regex = r"(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})"
-    match = re.search(regex, url)
-    return match.group(1) if match else None
+    pattern = r'(?:v=|\/)([0-9A-Za-z_-]{11})(?:\&|$)'
+    m = re.search(pattern, url)
+    return m.group(1) if m else None
 
 def get_video_ids_from_channel(youtube, channel_id):
-    """Retrieve all video IDs from a given channel."""
-    video_ids = []
-    request = youtube.search().list(
-        part="id",
-        channelId=channel_id,
-        maxResults=50,
-        type="video"
-    )
-    response = request.execute()
-    video_ids.extend([item['id']['videoId'] for item in response.get('items', [])])
+    ids = []
+    req = youtube.search().list(part='id', channelId=channel_id,
+                                maxResults=50, type='video')
+    while True:
+        res = req.execute()
+        ids += [item['id']['videoId'] for item in res.get('items',[])]
+        token = res.get('nextPageToken')
+        if not token: break
+        req = youtube.search().list(part='id', channelId=channel_id,
+                                    maxResults=50, pageToken=token, type='video')
+    return ids
 
-    # Paginate through results if needed
-    while 'nextPageToken' in response:
-        request = youtube.search().list(
-            part="id",
-            channelId=channel_id,
-            maxResults=50,
-            type="video",
-            pageToken=response['nextPageToken']
-        )
-        response = request.execute()
-        video_ids.extend([item['id']['videoId'] for item in response.get('items', [])])
-    return video_ids
-
-def fetch_transcription(video_id):
-    """Fetch transcript for a single video."""
+def fetch_transcription_segments(video_id):
     try:
-        transcript = YouTubeTranscriptApi.get_transcript(video_id)
-        return " ".join([t.get('text', '') for t in transcript]), None
+        return YouTubeTranscriptApi.get_transcript(video_id), None
     except (TranscriptsDisabled, NoTranscriptFound) as e:
-        return None, f"Transcript unavailable for video {video_id}: {e}"
+        return None, f"[{video_id}] no transcript: {e}"
     except Exception as e:
-        return None, f"Unexpected error fetching transcript for {video_id}: {e}"
+        return None, f"[{video_id}] error: {e}"
+
+def format_timestamp(sec):
+    m, s = divmod(int(sec), 60)
+    return f"{m:02d}:{s:02d}"
+
+def highlight(text, keywords):
+    """
+    Highlight each keyword with a lime background and its own color.
+    """
+    for idx, kw in enumerate(keywords):
+        color = KEY_COLORS[idx % len(KEY_COLORS)]
+        pattern = re.compile(f"(?i)({re.escape(kw)})")
+        text = pattern.sub(f"{color}{BLACK}\\1{RESET}", text)
+    return text
+
+def get_video_title(youtube, video_id):
+    try:
+        resp = youtube.videos().list(part="snippet", id=video_id).execute()
+        items = resp.get("items", [])
+        if items:
+            return items[0]["snippet"]["title"]
+    except Exception:
+        pass
+    return "Unknown Title"
 
 def main():
-    parser = argparse.ArgumentParser(description='Search YouTube video/channel transcripts.')
-    parser.add_argument('-k', '--keyword', required=True, help='Keyword or phrase to search for.')
-    parser.add_argument('-c', '--channel', help='YouTube channel ID.')
-    parser.add_argument('-v', '--video', help='Single YouTube link (e.g. https://youtu.be/XYZ).')
-    parser.add_argument('-f', '--file', help='Path to file with multiple YouTube video links.')
-    args = parser.parse_args()
+    p = argparse.ArgumentParser(description='Search YouTube transcripts by keyword(s).')
+    p.add_argument('-k','--keyword', required=True,
+                   help='Comma-separated keywords or a phrase (e.g. "word1,word2,phrase here")')
+    p.add_argument('-c','--channel', help='YouTube channel ID.')
+    p.add_argument('-v','--video', help='Single YouTube URL to scan.')
+    p.add_argument('-f','--file', help='Path to file with one YouTube URL per line.')
+    args = p.parse_args()
 
-    youtube_api_key = os.getenv('YOUTUBE_API_KEY')
-    if not youtube_api_key:
-        print("Error: YouTube API key not found. Set it in .env.")
+    # split into list; if no comma, it's one element (phrase)
+    raw = args.keyword
+    keywords = [k.strip() for k in raw.split(',') if k.strip()]
+
+    api_key = os.getenv('YOUTUBE_API_KEY')
+    if not api_key:
+        print("Error: set YOUTUBE_API_KEY in .env")
         return
 
-    youtube = build('youtube', 'v3', developerKey=youtube_api_key)
-
-    # Collect all video IDs
-    video_ids = []
+    yt = build('youtube','v3', developerKey=api_key)
+    vids = []
 
     if args.channel:
         try:
-            video_ids.extend(get_video_ids_from_channel(youtube, args.channel))
+            vids += get_video_ids_from_channel(yt, args.channel)
         except Exception as e:
-            print(f"Error fetching videos for channel {args.channel}: {e}")
+            print(f"Channel fetch error: {e}")
 
     if args.video:
         vid = extract_video_id(args.video)
-        if vid:
-            video_ids.append(vid)
-        else:
-            print(f"Error: Could not extract video ID from {args.video}")
+        if vid: vids.append(vid)
+        else: print(f"Bad video URL: {args.video}")
 
     if args.file:
         if os.path.isfile(args.file):
-            with open(args.file, 'r', encoding='utf-8') as f:
+            with open(args.file, encoding='utf-8') as f:
                 for line in f:
                     link = line.strip()
-                    if link:
-                        vid = extract_video_id(link)
-                        if vid:
-                            video_ids.append(vid)
-                        else:
-                            print(f"Error: Could not extract ID from '{link}'")
+                    if not link: continue
+                    vid = extract_video_id(link)
+                    if vid: vids.append(vid)
+                    else: print(f"Bad URL in {args.file}: {link}")
         else:
-            print(f"Error: File not found: {args.file}")
+            print(f"File not found: {args.file}")
 
-    video_ids = list(dict.fromkeys(video_ids))
-    if not video_ids:
-        print("No valid video IDs found.")
+    vids = list(dict.fromkeys(vids))
+    if not vids:
+        print("No videos to process.")
         return
 
-    matched_videos = []
     errors = []
-    keyword_lower = args.keyword.lower()
 
-    for vid_id in video_ids:
-        text, error = fetch_transcription(vid_id)
-        if error:
-            errors.append(error)
-        elif text and keyword_lower in text.lower():
-            matched_videos.append(vid_id)
+    for vid in vids:
+        segments, err = fetch_transcription_segments(vid)
+        if err:
+            errors.append(err)
+            continue
 
-    # Print matching video IDs
-    for video_id in matched_videos:
-        print(f"https://www.youtube.com/watch?v={video_id}")
+        matches = []
+        # include one segment before and after for context
+        CONTEXT = 1
+        for i, seg in enumerate(segments):
+            text = seg.get('text','')
+            low = text.lower()
+            if any(kw.lower() in low for kw in keywords):
+                # determine slice of segments for context
+                start_idx = max(0, i - CONTEXT)
+                end_idx   = min(len(segments), i + CONTEXT + 1)
+                context_text = " ".join(s.get('text','') for s in segments[start_idx:end_idx])
+
+                ts = seg.get('start', 0)
+                tstr = format_timestamp(ts)
+                link = f"https://www.youtube.com/watch?v={vid}&t={int(ts)}s"
+                snippet = highlight(context_text, keywords)
+                matches.append((link, tstr, snippet))
+
+        if matches:
+            title = get_video_title(yt, vid)
+            print(f"\n{BLUE}{title}{RESET}\n")
+            for link, tstr, snippet in matches:
+                print(f"{link}  ({YELLOW}{tstr}{RESET})\n  …{snippet}…\n")
 
     if errors:
-        print("\nErrors:")
-        for err in errors:
-            print(err)
+        print("Errors:")
+        for e in errors:
+            print(" ", e)
 
 if __name__ == "__main__":
     main()
