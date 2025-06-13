@@ -1,4 +1,4 @@
-# Recursive Web Directory Downloader
+# Recursive Web Directory Downloader (`rwdl`)
 
 ![Python Version](https://img.shields.io/badge/python-3.7%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
