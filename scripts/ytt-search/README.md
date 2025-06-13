@@ -16,6 +16,9 @@ Highlights matches in context, prints timestamps, and generates "jump-to" links,
 - **Single-video** search by URL
 - **Batch** mode: read multiple URLs from a plaintext file
 - Search for **multiple** comma-separated keywords or **multi-word phrases**
+- **Duration filter** (`-x`): include/exclude videos by length (e.g. `<5m`, `>2h`)  
+- **Sorting** (`-s`): newest, oldest, or most popular (view count)  
+- **Limit** (`-m`): max number of channel videos (`1.3k`, `2m`, etc.)  
 - Shows **timestamped** jump-links (yellow)
 - Highlights each keyword with a **colored background** (lime/cyan/red/green) and black text
 - Includes **one segment of context** before & after each match (adjustable)
@@ -52,6 +55,7 @@ python yttrsch.py \
   [-f <FILE>] \
   [-s newest|oldest|popular] \
   [-m <MAX_VIDEOS>] \
+  [-x <EXPR> …] \
   [-V]
 ```
 
@@ -69,6 +73,9 @@ Arguments:
   Order channel videos by `newest` (default), `oldest`, or `popular` (view count).  
 - `-m, --maximum`  
   Maximum number of videos to process (supports `k`/`m` suffixes, e.g. `1.3k`, `2m`).  
+- `-x, --length`  
+  One or more length filters with `+` (minimum) or `-` (maximum) prefixes, optional `s|m|h` (default seconds).  
+  e.g. `-x -5m +2h 30` filters 30 s – 2 h and excludes >5 m or <… as combined.
 - `-V, --version`  
   Show tool version and exit.
 

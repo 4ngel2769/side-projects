@@ -10,6 +10,7 @@ import os
 import re
 import sys
 import time
+import isodate
 from urllib.parse import urlparse
 from dotenv import load_dotenv
 from youtube_transcript_api import YouTubeTranscriptApi
@@ -184,6 +185,32 @@ License: MIT
         print(msg)
         parser.exit()
 
+def parse_length_expr(expr: str):
+    """Parse '+5m' or '-2h' (or '30') into (op, seconds)."""
+    m = re.match(r'([+-])(\d+(\.\d+)?)([smh])?$', expr.strip())
+    if not m:
+        raise argparse.ArgumentTypeError(f"Bad length filter: {expr!r}")
+    sign, num, _, unit = m.groups()
+    op = '>' if sign == '+' else '<'
+    num = float(num)
+    seconds = num * {'s':1, 'm':60, 'h':3600}[unit or 's']
+    return op, seconds
+
+def fetch_video_durations(youtube, vids:list[str]) -> dict[str,int]:
+    """Batch-fetch each video’s duration in seconds via contentDetails."""
+    durations = {}
+    for i in range(0, len(vids), 50):
+        batch = vids[i:i+50]
+        resp = youtube.videos().list(
+            part="contentDetails",
+            id=",".join(batch)
+        ).execute()
+        for item in resp.get("items", []):
+            vid = item["id"]
+            iso = item["contentDetails"]["duration"]
+            durations[vid] = int(isodate.parse_duration(iso).total_seconds())
+    return durations
+
 def main():
     p = argparse.ArgumentParser(description='Search YouTube transcripts by keyword(s).')
     # version flag
@@ -200,6 +227,8 @@ def main():
     # remap single-video to -v → uppercase V is taken by version
     p.add_argument('-v','--video', help='Single YouTube URL')
     p.add_argument('-f','--file', help='Path to file of YouTube URLs')
+    p.add_argument('-x','--length', nargs='+', metavar='EXPR',
+                   help="Filter by video duration with + or - prefixes, e.g. -5m +2h 30 (seconds)")
     args = p.parse_args()
 
     # parse keywords
@@ -241,10 +270,35 @@ def main():
             print(f"File not found: {args.file}")
 
     vids = list(dict.fromkeys(vids))
+    if not vids:
+        print("No videos to process."); return
+
+    # apply length filters
+    if args.length:
+        try:
+            exprs = [parse_length_expr(e) for e in args.length]
+        except argparse.ArgumentTypeError as e:
+            print(e); return
+
+        durations = fetch_video_durations(yt, vids)
+        filtered = []
+        for vid in vids:
+            d = durations.get(vid)
+            if d is None:
+                continue  # skip if we can't get duration
+            ok = True
+            for op, secs in exprs:
+                if op == '<'  and not (d <  secs): ok = False
+                if op == '<=' and not (d <= secs): ok = False
+                if op == '>'  and not (d >  secs): ok = False
+                if op == '>=' and not (d >= secs): ok = False
+            if ok:
+                filtered.append(vid)
+        vids = filtered
+
     total = len(vids)
     if total == 0:
-        print("No videos to process.")
-        return
+        print("No videos match length filters."); return
 
     errors = []
     # track which keywords were actually found
