@@ -1,4 +1,10 @@
-# script.py
+################################################
+# YTTS - YouTube Transcript Search Tool
+# Copyright (c) 2025 angeldev0
+# Code written by angeldev0
+# License: MIT
+################################################
+
 import argparse
 import os
 import re
@@ -136,10 +142,28 @@ def get_video_title(youtube, video_id):
         pass
     return "Unknown Title"
 
+class VersionAction(argparse.Action):
+    def __init__(self, option_strings, dest=argparse.SUPPRESS, default=argparse.SUPPRESS, version="1.0.0", help="Show version and exit"):
+        super().__init__(option_strings=option_strings, dest=dest, default=default, nargs=0, help=help)
+        self.version = version
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        msg = f"""
+YTTS - YouTube Transcript Search Tool
+Version: {self.version}
+Author: angeldev0
+License: MIT
+"""
+        print(msg)
+        parser.exit()
+
 def main():
     p = argparse.ArgumentParser(description='Search YouTube transcripts by keyword(s).')
+    # version flag
+    p.add_argument('-V','--version', action=VersionAction, help='Show version and exit')
     p.add_argument('-k','--keyword', required=True, help='Comma-separated keywords or a phrase')
     p.add_argument('-c','--channel', help='Channel ID or URL')
+    # remap single-video to -v → uppercase V is taken by version
     p.add_argument('-v','--video', help='Single YouTube URL')
     p.add_argument('-f','--file', help='Path to file of YouTube URLs')
     args = p.parse_args()

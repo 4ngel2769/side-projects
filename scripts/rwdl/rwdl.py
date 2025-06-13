@@ -1,9 +1,9 @@
 ################################################
-# Recursive Web Directory Downloader
-# Author: angeldev0
+# RWDL - Recursive Web Directory Downloader
+# Copyright (c) 2025 angeldev0
+# Code written by angeldev0
 # License: MIT
 ################################################
-
 
 import os
 import argparse
