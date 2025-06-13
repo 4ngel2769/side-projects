@@ -62,8 +62,16 @@ def extract_video_id(url):
 
 def parse_channel_input(youtube, raw):
     """
-    Accepts a raw channel ID, or URL/handle, and returns a valid channel ID.
+    Accepts:
+      • raw channel ID (UC…)
+      • bare handle (@name)
+      • full channel URL or @handle URL
+    and returns the proper UC… ID.
     """
+    # bare handle
+    if raw.startswith("@"):
+        return resolve_handle(youtube, raw[1:])
+    # full URL
     if raw.startswith("http"):
         p = urlparse(raw)
         parts = p.path.strip("/").split("/")

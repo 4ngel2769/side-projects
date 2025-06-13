@@ -16,7 +16,7 @@ Highlights matches in context, prints timestamps, and generates "jump-to" links,
 - **Single-video** search by URL
 - **Batch** mode: read multiple URLs from a plaintext file
 - Search for **multiple** comma-separated keywords or **multi-word phrases**
-- **Duration filter** (`-x`): include/exclude videos by length (e.g. `<5m`, `>2h`)  
+- **Duration filter** (`-x`): include/exclude videos by length (e.g. `"+5m"`, `"-2h", `"30"` for 30 seconds)  
 - **Sorting** (`-s`): newest, oldest, or most popular (view count)  
 - **Limit** (`-m`): max number of channel videos (`1.3k`, `2m`, etc.)  
 - Shows **timestamped** jump-links (yellow)
@@ -74,8 +74,12 @@ Arguments:
 - `-m, --maximum`  
   Maximum number of videos to process (supports `k`/`m` suffixes, e.g. `1.3k`, `2m`).  
 - `-x, --length`  
-  One or more length filters with `+` (minimum) or `-` (maximum) prefixes, optional `s|m|h` (default seconds).  
-  e.g. `-x -5m +2h 30` filters 30 s – 2 h and excludes >5 m or <… as combined.
+  One or more length filters with + (min) or - (max) prefixes, optional s|m|h (default seconds).  
+  e.g. `-x "+1m -10m 30"`
+
+> ⚠️ Because values starting with `-` look like flags, you must either:
+    • quote them: `-x "-10m"`  
+    • or use `=`:        `--length=`
 - `-V, --version`  
   Show tool version and exit.
 
