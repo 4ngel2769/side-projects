@@ -1,0 +1,3 @@
+youtube_transcript_api
+python-dotenv
+google-api-python-client
