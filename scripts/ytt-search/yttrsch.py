@@ -235,8 +235,8 @@ def main():
     # remap single-video to -v → uppercase V is taken by version
     p.add_argument('-v','--video', help='Single YouTube URL')
     p.add_argument('-f','--file', help='Path to file of YouTube URLs')
-    p.add_argument('-x','--length', nargs='+', metavar='EXPR',
-                   help="Filter by video duration with + or - prefixes, e.g. -5m +2h 30 (seconds)")
+    p.add_argument('-x','--length', nargs='+', metavar='\"EXPR\"',
+                   help="Filter by video duration with + or - prefixes, e.g. -x \"+5m -2h\" (seconds)")
     args = p.parse_args()
 
     # parse keywords
