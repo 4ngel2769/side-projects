@@ -74,12 +74,13 @@ Arguments:
 - `-m, --maximum`  
   Maximum number of videos to process (supports `k`/`m` suffixes, e.g. `1.3k`, `2m`).  
 - `-x, --length`  
-  One or more length filters with + (min) or - (max) prefixes, optional s|m|h (default seconds).  
-  e.g. `-x "+1m -10m 30"`
-
-> ⚠️ Because values starting with `-` look like flags, you must either:
-    • quote them: `-x "-10m"`  
-    • or use `=`:        `--length=`
+  One or more filters with `+` (min) or `-` (max), optional `s|m|h` (default is sec).  
+  Examples:
+    ```bash
+    -x "+1m -10m"
+    -x "+1m,-10m"
+    ```
+  Videos must satisfy *all* filters.
 - `-V, --version`  
   Show tool version and exit.
 

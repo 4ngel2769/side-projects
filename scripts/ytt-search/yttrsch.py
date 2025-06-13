@@ -281,12 +281,19 @@ def main():
     if not vids:
         print("No videos to process."); return
 
-    # apply length filters
+    # apply length filters (allow space/comma‐separated in one string or multiple args)
     if args.length:
+        # split every token on commas or whitespace
+        raw_tokens = []
+        for chunk in args.length:
+            raw_tokens += re.split(r'[,\s]+', chunk.strip())
+        # filter out empty strings
+        raw_tokens = [t for t in raw_tokens if t]
         try:
-            exprs = [parse_length_expr(e) for e in args.length]
+            exprs = [parse_length_expr(tok) for tok in raw_tokens]
         except argparse.ArgumentTypeError as e:
-            print(e); return
+            print(e)
+            return
 
         durations = fetch_video_durations(yt, vids)
         filtered = []
