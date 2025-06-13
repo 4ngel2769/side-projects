@@ -95,19 +95,46 @@ def resolve_handle(youtube, name):
         return items[0]["id"]["channelId"]
     raise ValueError(f"Cannot resolve channel identifier: {name}")
 
-def get_video_ids_from_channel(youtube, channel_id):
-    ids, req = [], youtube.search().list(
-        part="id", channelId=channel_id, maxResults=50, type="video"
+def parse_max_videos(val):
+    """Parse human-friendly video count (e.g. 1.3k, 2m) into integer."""
+    v = val.lower().replace(',', '').strip()
+    if v.endswith('k'):
+        return int(float(v[:-1]) * 1_000)
+    if v.endswith('m'):
+        return int(float(v[:-1]) * 1_000_000)
+    return int(v)
+
+def get_video_ids_from_channel(youtube, channel_id, sort_order='newest', max_videos=None):
+    """
+    Fetch video IDs from a channel with optional sort and limit.
+    sort_order: 'newest', 'oldest', or 'popular'
+    max_videos: int or None
+    """
+    ids = []
+    # API order param
+    order_param = 'viewCount' if sort_order == 'popular' else 'date'
+    req = youtube.search().list(
+        part="id", channelId=channel_id,
+        maxResults=50, type="video",
+        order=order_param
     )
     while True:
         res = req.execute()
-        ids += [item['id']['videoId'] for item in res.get('items',[])]
+        batch = [item['id']['videoId'] for item in res.get('items', [])]
+        ids.extend(batch)
+        if max_videos and len(ids) >= max_videos:
+            ids = ids[:max_videos]
+            break
         token = res.get('nextPageToken')
-        if not token: break
+        if not token:
+            break
         req = youtube.search().list(
             part="id", channelId=channel_id,
-            maxResults=50, pageToken=token, type="video"
+            maxResults=50, pageToken=token,
+            type="video", order=order_param
         )
+    if sort_order == 'oldest':
+        ids.reverse()
     return ids
 
 def fetch_transcription_segments(video_id):
@@ -162,7 +189,14 @@ def main():
     # version flag
     p.add_argument('-V','--version', action=VersionAction, help='Show version and exit')
     p.add_argument('-k','--keyword', required=True, help='Comma-separated keywords or a phrase')
-    p.add_argument('-c','--channel', help='Channel ID or URL')
+    p.add_argument('-c','--channel', help='Channel ID, URL or handle')
+    p.add_argument('-s','--sort',
+                   choices=['newest','oldest','popular'],
+                   default='newest',
+                   help='Sort channel videos by newest, oldest, or popular (view count)')
+    p.add_argument('-m','--maximum',
+                   type=parse_max_videos,
+                   help='Maximum number of channel videos to process (e.g. 1.3k, 2m)')
     # remap single-video to -v → uppercase V is taken by version
     p.add_argument('-v','--video', help='Single YouTube URL')
     p.add_argument('-f','--file', help='Path to file of YouTube URLs')
@@ -182,7 +216,11 @@ def main():
     if args.channel:
         try:
             cid = parse_channel_input(yt, args.channel)
-            vids += get_video_ids_from_channel(yt, cid)
+            vids += get_video_ids_from_channel(
+                yt, cid,
+                sort_order=args.sort,
+                max_videos=args.maximum
+            )
         except Exception as e:
             print(f"Channel fetch error: {e}")
 
@@ -209,6 +247,8 @@ def main():
         return
 
     errors = []
+    # track which keywords were actually found
+    found_keywords = set()
 
     for idx, vid in enumerate(vids, start=1):
         segments, err = fetch_transcription_segments(vid)
@@ -220,7 +260,12 @@ def main():
             CONTEXT = 1
             for i, seg in enumerate(segments):
                 text = seg.get('text','')
-                if any(kw.lower() in text.lower() for kw in keywords):
+                low_text = text.lower()
+                # record any keyword found in this segment
+                for kw in keywords:
+                    if kw.lower() in low_text:
+                        found_keywords.add(kw.lower())
+                if any(kw.lower() in low_text for kw in keywords):
                     start_idx = max(0, i - CONTEXT)
                     end_idx   = min(len(segments), i + CONTEXT + 1)
                     ctx = " ".join(s.get('text','') for s in segments[start_idx:end_idx])
@@ -239,6 +284,13 @@ def main():
 
         # always redraw bar after handling one video
         update_progress(idx, total)
+
+    # after processing all videos report any keywords not found
+    missing = [kw for kw in keywords if kw.lower() not in found_keywords]
+    if missing:
+        print("\nKeywords not found:")
+        for kw in missing:
+            print(f"  - {kw}")
 
     if errors:
         print("\nErrors:")

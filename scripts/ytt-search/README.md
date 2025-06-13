@@ -3,9 +3,11 @@
 ![Python Version](https://img.shields.io/badge/python-3.7%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-A CLI utility to search YouTube video transcripts for one or more keywords or phrases.
-Supports scanning an entire channel (by ID, URL or handle), a single video URL, or a batch of URLs from a file.
-Highlights matches in context, prints timestamps, and generates “jump-to” links with an in-place progress bar.
+A CLI utility to search YouTube video transcripts for one or more keywords or phrases.  
+Supports scanning an entire channel (by ID, URL or handle), a single video URL, or a batch of URLs from a file.  
+Highlights matches in context, prints timestamps, and generates "jump-to" links, shows a progress bar, and summarizes keywords that weren't found.
+
+---
 
 ## Features
 
@@ -38,6 +40,8 @@ Highlights matches in context, prints timestamps, and generates “jump-to” li
     YOUTUBE_API_KEY=YOUR_API_KEY_HERE
     ```
 
+---
+
 ## Usage
 
 ```bash
@@ -45,45 +49,68 @@ python yttrsch.py \
   -k <KEYWORDS> \
   [-c <CHANNEL_ID|URL|@handle>] \
   [-v <VIDEO_URL>] \
-  [-f <FILE>]
+  [-f <FILE>] \
+  [-s newest|oldest|popular] \
+  [-m <MAX_VIDEOS>] \
+  [-V]
 ```
 
-- `-k, --keyword`
-  Comma-separate multiple keywords (e.g. `apple,banana`)
-  or wrap a multi-word phrase in quotes (e.g. `"machine learning"`).
-- `-c, --channel`
-  Channel ID (`UC…`), URL (`https://www.youtube.com/channel/…`), or handle (`@name`).
-- `-v, --video`
-  Single YouTube URL.
-- `-f, --file`
-  Path to a text file with one YouTube URL per line.
+Arguments:
+
+- `-k, --keyword`  
+  Comma-separated keywords or a quoted phrase (e.g. `apple,banana` or `"machine learning"`).  
+- `-c, --channel`  
+  Channel ID (`UC…`), URL (`https://youtube.com/channel/...`), or handle (`@name`).  
+- `-v, --video`  
+  Single YouTube URL.  
+- `-f, --file`  
+  Path to a text file containing one video URL per line.  
+- `-s, --sort`  
+  Order channel videos by `newest` (default), `oldest`, or `popular` (view count).  
+- `-m, --maximum`  
+  Maximum number of videos to process (supports `k`/`m` suffixes, e.g. `1.3k`, `2m`).  
+- `-V, --version`  
+  Show tool version and exit.
+
+---
 
 ## Examples
 
-1. **Channel scan**:
-    ```bash
-    python yttrsch.py \
-      -k "data science,python" \
-      -c https://www.youtube.com/@upir_upir
-    ```
-2. **Single video**:
-    ```bash
-    python yttrsch.py \
-      -k "deep learning" \
-      -v https://www.youtube.com/watch?v=dQw4w9WgXcQ
-    ```
-3. **Batch mode**:
-    ```bash
-    python yttrsch.py \
-      -k banana,fruit \
-      -f videos.txt
-    ```
-   `videos.txt`:
-    ```
-    https://youtu.be/VIDEOID1
-    https://youtu.be/VIDEOID2
-    https://www.youtube.com/watch?v=VIDEOID3
-    ```
+1. **Show version**  
+   ```bash
+   python yttrsch.py -V
+   ```
+
+2. **Channel scan, newest first, limit 100**  
+   ```bash
+   python yttrsch.py \
+     -k banana,fruit \
+     -c https://www.youtube.com/@upir_upir \
+     -s newest \
+     -m 100
+   ```
+
+3. **Channel scan, oldest first**  
+   ```bash
+   python yttrsch.py \
+     -k "data science, machine learning" \
+     -c UC2DjFE7Xf11URZqWBigcVOQ \
+     -s oldest
+   ```
+
+4. **Single video**  
+   ```bash
+   python yttrsch.py \
+     -k "deep learning" \
+     -v https://youtu.be/dQw4w9WgXcQ
+   ```
+
+5. **Batch mode from `example_links.txt`**  
+   ```bash
+   python yttrsch.py -k hello -f example_links.txt
+   ```
+
+---
 
 ## Output
 
@@ -112,9 +139,13 @@ A progress bar remains at the bottom:
 Processing [=========           ] 5/20 (25%)  Done!
 ```
 
-When complete, it turns green:
+When complete, it turns green and lists any keywords not found:
 ```
 Processing [====================] 20/20 (100%)  Done!
+
+Keywords not found:
+  - apple
+  - orange
 ```
 
 ## Troubleshooting
@@ -122,7 +153,7 @@ Processing [====================] 20/20 (100%)  Done!
 - **Error: set YOUTUBE_API_KEY in .env**
 > Ensure the file exists, is in the script folder, and contains a valid key.
 - **Quota exceeded**
-> YouTube Data API quotas reset daily—use another key or wait.
+> YouTube Data API quotas reset daily. Use another key or wait.
 - **Missing transcripts**
 > Some videos disable transcripts or have no generated captions.
 - **Slow performance**
