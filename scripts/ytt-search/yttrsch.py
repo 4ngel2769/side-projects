@@ -9,7 +9,7 @@ import argparse
 import os
 import re
 import sys
-import time
+# import time
 import isodate
 from urllib.parse import urlparse
 from dotenv import load_dotenv
@@ -17,7 +17,6 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound
 from googleapiclient.discovery import build
 
-# ANSI color codes
 BLUE      = '\033[94m'
 YELLOW    = '\033[93m'
 BG_LIME   = '\033[102m'
@@ -33,7 +32,6 @@ BLACK     = '\033[30m'
 WHITE     = '\033[37m'
 RESET     = '\033[0m'
 
-# cycle through these for each keyword
 KEY_COLORS = [BG_CYAN, BG_LIME, BG_RED, BG_GREEN]
 
 load_dotenv()
@@ -48,7 +46,7 @@ def update_progress(current, total, width=40, prefix="Processing"):
     pct = current / total
     filled = int(pct * width)
     bar = f"[{'=' * filled}{' ' * (width - filled)}]"
-    # purple background + black text for prefix + bar
+    
     sys.stdout.write(f"\r{BG_PURPLE}{BLACK}{prefix} {bar} "
                      f"{current}/{total} ({pct:.0%}){RESET}")
     sys.stdout.flush()
@@ -71,26 +69,25 @@ def parse_channel_input(youtube, raw):
     # bare handle
     if raw.startswith("@"):
         return resolve_handle(youtube, raw[1:])
-    # full URL
     if raw.startswith("http"):
         p = urlparse(raw)
         parts = p.path.strip("/").split("/")
-        # e.g. /@handle
+        # /@handle
         if parts[0].startswith("@"):
             return resolve_handle(youtube, parts[0][1:])
-        # e.g. /channel/UC...
+        # /channel/UC
         if parts[0] == "channel" and len(parts) > 1:
             return parts[1]
-        # fallback: custom path
+        # fallback path
         return resolve_handle(youtube, parts[-1])
-    # assume it's already an ID
+    # assume it's an ID
     return raw
 
 def resolve_handle(youtube, name):
     """
     Try channels().list(forUsername=…) then search().list(type=channel, q=…)
     """
-    # legacy username
+    # old username
     res = youtube.channels().list(part="id", forUsername=name).execute()
     items = res.get("items", [])
     if items:
@@ -221,7 +218,6 @@ def fetch_video_durations(youtube, vids:list[str]) -> dict[str,int]:
 
 def main():
     p = argparse.ArgumentParser(description='Search YouTube transcripts by keyword(s).')
-    # version flag
     p.add_argument('-V','--version', action=VersionAction, help='Show version and exit')
     p.add_argument('-k','--keyword', required=True, help='Comma-separated keywords or a phrase')
     p.add_argument('-c','--channel', help='Channel ID, URL or handle')
@@ -232,7 +228,6 @@ def main():
     p.add_argument('-m','--maximum',
                    type=parse_max_videos,
                    help='Maximum number of channel videos to process (e.g. 1.3k, 2m)')
-    # remap single-video to -v → uppercase V is taken by version
     p.add_argument('-v','--video', help='Single YouTube URL')
     p.add_argument('-f','--file', help='Path to file of YouTube URLs')
     p.add_argument('-x','--length', nargs='+', metavar='\"EXPR\"',
@@ -283,11 +278,9 @@ def main():
 
     # apply length filters (allow space/comma‐separated in one string or multiple args)
     if args.length:
-        # split every token on commas or whitespace
         raw_tokens = []
         for chunk in args.length:
             raw_tokens += re.split(r'[,\s]+', chunk.strip())
-        # filter out empty strings
         raw_tokens = [t for t in raw_tokens if t]
         try:
             exprs = [parse_length_expr(tok) for tok in raw_tokens]
@@ -316,7 +309,6 @@ def main():
         print("No videos match length filters."); return
 
     errors = []
-    # track which keywords were actually found
     found_keywords = set()
 
     for idx, vid in enumerate(vids, start=1):
@@ -324,7 +316,6 @@ def main():
         if err:
             errors.append(err)
         else:
-            # find matches...
             matches = []
             CONTEXT = 1
             for i, seg in enumerate(segments):
@@ -351,10 +342,9 @@ def main():
                 for link, tstr, snippet in matches:
                     print(f"{link}  ({YELLOW}{tstr}{RESET})\n  …{snippet}…\n")
 
-        # always redraw bar after handling one video
         update_progress(idx, total)
 
-    # after processing all videos report any keywords not found
+    # report keywords not found
     missing = [kw for kw in keywords if kw.lower() not in found_keywords]
     if missing:
         print("\nKeywords not found:")
