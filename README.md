@@ -7,7 +7,7 @@ This repository is a collection of my side-projects, tools, and more that I buil
 
 ## 🚀 Projects
 
-- ### [YouTube Transcript Search Tool (`ytt-search`)](scripts/ytt-search/README.md)
+- ### [YouTube Transcript Search Tool (`ytt-search`)](https://github.com/4ngel2769/ytt-search)
  **What it does:**
 Scan YouTube channels, single videos, or a batch of links and search transcripts for your keywords or phrases.
 Highlights matches in context, prints jump-to links with timestamps, and shows a slick progress bar!
@@ -15,9 +15,9 @@ Highlights matches in context, prints jump-to links with timestamps, and shows a
  **Why:**
 I made this tool out of a need to find that one thing someone said in that one 2 hour podcast that I can't find.
 
-👉 [View on GitHub](scripts/ytt-search/README.md)
+👉 [View on GitHub](https://github.com/4ngel2769/ytt-search)
 
-- ### [Recursive Web Directory Downloader (`rwdl`)](scripts/rwdl/README.md)
+- ### [Recursive Web Directory Downloader (`rwdl`)](https://github.com/4ngel2769/rwdl)
  **What it does:**
 Recursively crawl Apache-style web directories and download files matching your extensions (e.g. `.iso`, `.torrent`, `.exe`).
 Keeps folder structure intact, skips duplicates, and can resume where it left off.
@@ -25,15 +25,15 @@ Keeps folder structure intact, skips duplicates, and can resume where it left of
  **Why:**
 I wrote this script because I needed a way to mirror all the .torrent files from the ParrotSec repo into the same versioned folder structure as the original site.
 
-👉 [View on GitHub](scripts/rwdl/README.md)
+👉 [View on GitHub](https://github.com/4ngel2769/rwdl)
 
 ---
 
 ✨ **Coming Soon**
 Stay tuned for more utilities file organizers, API wrappers, CLI games, and who knows what else!
 
----
-
+<!-- --- -->
+<!-- 
 ## 🛠 Installation & Quickstart
 
 1. Clone the repo
@@ -67,7 +67,7 @@ Stay tuned for more utilities file organizers, API wrappers, CLI games, and who 
    python rwdl.py -u https://example.com/files/ -e .iso,.zip
    ```
 
----
+--- -->
 
 ## 💚 Contributing
 
