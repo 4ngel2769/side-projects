@@ -7,7 +7,7 @@ This repository is a collection of my side-projects, tools, and more that I buil
 
 ## 🚀 Projects
 
-- ### [YouTube Transcript Search Tool (`ytt-search`)](https://github.com/4ngel2769/ytt-search)
+- ### [YouTube Transcript Search Tool (`yttr-search`)](https://github.com/4ngel2769/yttr-search)
  **What it does:**
 Scan YouTube channels, single videos, or a batch of links and search transcripts for your keywords or phrases.
 Highlights matches in context, prints jump-to links with timestamps, and shows a slick progress bar!
@@ -15,7 +15,7 @@ Highlights matches in context, prints jump-to links with timestamps, and shows a
  **Why:**
 I made this tool out of a need to find that one thing someone said in that one 2 hour podcast that I can't find.
 
-👉 [View on GitHub](https://github.com/4ngel2769/ytt-search)
+👉 [View on GitHub](https://github.com/4ngel2769/yttr-search)
 
 - ### [Recursive Web Directory Downloader (`rwdl`)](https://github.com/4ngel2769/rwdl)
  **What it does:**
